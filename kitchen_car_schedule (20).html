@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FELICE Business Calendar</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #f7f5f0; --surface: #ffffff; --surface2: #f0ede6;
+  --border: rgba(0,0,0,0.1); --border2: rgba(0,0,0,0.18);
+  --text: #1a1a1a; --text2: #6b6b6b; --accent: #d44f2e;
+  --radius: 10px; --radius-lg: 16px;
+  --ga: #d44f2e; --gb: #2471a3; --gc: #1e8449;
+}
+body { font-family: 'Noto Sans JP', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+.topbar {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 0 24px; height: 56px; display: flex; align-items: center;
+  justify-content: space-between; position: sticky; top: 0; z-index: 50;
+}
+.topbar-title { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.topbar-title span { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); display:inline-block; }
+.topbar-btn {
+  padding: 7px 14px; border-radius: var(--radius); font-size: 13px; font-weight: 500;
+  border: 1px solid var(--border2); background: var(--surface); color: var(--text);
+  cursor: pointer; font-family: inherit; transition: background 0.15s;
+}
+.topbar-btn:hover { background: var(--surface2); }
+.topbar-btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.topbar-btn.primary:hover { opacity: 0.85; }
+.main { max-width: 960px; margin: 0 auto; padding: 24px 16px 60px; }
+.section-label { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; color: var(--text2); margin-bottom: 10px; }
+.tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+.tab {
+  padding: 8px 16px; font-size: 13px; font-weight: 500; cursor: pointer;
+  border: none; background: transparent; color: var(--text2); font-family: inherit;
+  border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color 0.15s;
+}
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+.group-section { margin-bottom: 20px; }
+.group-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.group-badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+.badge-a { background: #fdecea; color: var(--ga); }
+.badge-b { background: #e8f4fd; color: var(--gb); }
+.badge-c { background: #eafaf1; color: var(--gc); }
+.group-name { font-size: 13px; font-weight: 500; color: var(--text2); }
+.loc-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.loc-table th {
+  text-align: left; padding: 6px 10px; font-size: 11px; font-weight: 700;
+  color: var(--text2); border-bottom: 1px solid var(--border); background: var(--surface2);
+}
+.loc-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.loc-table tr:last-child td { border-bottom: none; }
+.loc-table tr:hover td { background: var(--surface2); }
+.days-cell { display: flex; flex-wrap: wrap; gap: 4px; }
+.day-tag { font-size: 11px; padding: 2px 7px; border-radius: 4px; border: 1px solid; font-weight: 500; }
+.cal-nav { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.cal-nav button {
+  width: 32px; height: 32px; border: 1px solid var(--border2); border-radius: 50%;
+  background: var(--surface); font-size: 16px; cursor: pointer; color: var(--text);
+  display: flex; align-items: center; justify-content: center; transition: background 0.15s;
+}
+.cal-nav button:hover { background: var(--surface2); }
+.cal-nav .month-label { font-size: 17px; font-weight: 700; }
+.calendar { background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border); overflow: hidden; }
+.cal-head { display: grid; grid-template-columns: repeat(7, 1fr); background: var(--surface2); border-bottom: 1px solid var(--border); }
+.cal-head div { padding: 8px 4px; text-align: center; font-size: 11px; font-weight: 700; color: var(--text2); }
+.cal-head div:first-child { color: #c0392b; }
+.cal-head div:last-child { color: #2980b9; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.cal-cell { min-height: 90px; padding: 6px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.12s; min-width: 0; overflow: hidden; }
+.cal-cell:nth-child(7n) { border-right: none; }
+.cal-cell:hover { background: var(--surface2); }
+.cal-cell.empty { background: #fafaf8; cursor: default; }
+.cal-cell.empty:hover { background: #fafaf8; }
+.cal-cell .day-num { font-size: 12px; font-weight: 500; color: var(--text2); width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: 50%; margin-bottom: 3px; }
+.cal-cell.sunday .day-num { color: #c0392b; }
+.cal-cell.saturday .day-num { color: #2980b9; }
+.cal-cell.today .day-num { background: var(--accent); color: #fff; font-weight: 700; }
+.event-chip { font-size: 11px; padding: 2px 4px; border-radius: 4px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; display: block; width: 100%; box-sizing: border-box; }
+.suggest-bar { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 16px; margin-bottom: 16px; }
+.suggest-bar h4 { font-size: 13px; font-weight: 700; margin-bottom: 10px; color: var(--text2); }
+.suggest-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.suggest-chip { font-size: 12px; padding: 4px 10px; border-radius: 999px; border: 1px solid; cursor: pointer; transition: opacity 0.15s; font-family: inherit; background: transparent; }
+.suggest-chip:hover { opacity: 0.7; }
+.add-loc-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+.add-loc-row input, .add-loc-row select { padding: 8px 12px; border: 1px solid var(--border2); border-radius: var(--radius); font-size: 13px; font-family: inherit; background: var(--surface); color: var(--text); outline: none; }
+.add-loc-row input:focus, .add-loc-row select:focus { border-color: var(--accent); }
+.add-loc-row input { flex: 1; min-width: 140px; max-width: 220px; }
+.add-loc-row button { padding: 8px 14px; background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); font-size: 13px; font-family: inherit; cursor: pointer; color: var(--text); transition: background 0.15s; }
+.add-loc-row button:hover { background: var(--surface2); }
+.overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 200; align-items: center; justify-content: center; padding: 16px; overflow-y: auto; }
+.overlay.open { display: flex; }
+.modal { background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 24px; width: 100%; max-width: 360px; box-shadow: 0 8px 32px rgba(0,0,0,0.12); margin: auto; }
+.modal h3 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+.modal .modal-sub { font-size: 12px; color: var(--text2); margin-bottom: 16px; }
+.modal-field { margin-bottom: 10px; }
+.modal-field label { display: block; font-size: 11px; font-weight: 700; color: var(--text2); letter-spacing: 0.05em; margin-bottom: 4px; }
+.modal-field select, .modal-field input { width: 100%; padding: 9px 12px; border: 1px solid var(--border2); border-radius: var(--radius); font-size: 14px; font-family: inherit; background: var(--surface); color: var(--text); outline: none; }
+.modal-field select:focus, .modal-field input:focus { border-color: var(--accent); }
+.time-row { display: flex; gap: 8px; align-items: center; }
+.time-row input { flex: 1; }
+.time-sep { font-size: 13px; color: var(--text2); flex-shrink: 0; }
+.modal-footer { display: flex; gap: 8px; margin-top: 16px; }
+.modal-footer button { flex: 1; padding: 9px; border-radius: var(--radius); font-size: 13px; font-weight: 500; font-family: inherit; cursor: pointer; border: 1px solid var(--border2); background: var(--surface); color: var(--text); transition: background 0.15s; }
+.modal-footer button:hover { background: var(--surface2); }
+.modal-footer button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.modal-footer button.primary:hover { opacity: 0.88; }
+.modal-footer button.danger { color: #c0392b; border-color: #e8b4ae; }
+.modal-footer button.danger:hover { background: #fdf0ec; }
+@media (max-width: 600px) {
+  .topbar { padding: 0 12px; }
+  .main { padding: 16px 8px 40px; }
+  .cal-cell { min-height: 64px; }
+  .event-chip { font-size: 10px; }
+}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="topbar-title"><span></span>FELICE Business Calendar</div>
+  <button class="topbar-btn primary" onclick="exportICS()">▾ .ics 書き出し</button>
+</div>
+<div class="main">
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('calendar')">カレンダー</button>
+    <button class="tab" onclick="switchTab('today')">今日の設定</button>
+    <button class="tab" onclick="switchTab('locations')">出店先一覧</button>
+  </div>
+  <div class="tab-content active" id="tab-calendar">
+    <div class="cal-nav">
+      <button onclick="changeMonth(-1)">&#8249;</button>
+      <span class="month-label" id="monthLabel"></span>
+      <button onclick="changeMonth(1)">&#8250;</button>
+    </div>
+    <div id="suggestBar"></div>
+    <div class="calendar">
+      <div class="cal-head">
+        <div>日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div>土</div>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+    </div>
+  </div>
+  <div class="tab-content" id="tab-today">
+    <div id="todayView"></div>
+  </div>
+  <div class="tab-content" id="tab-locations">
+    <div id="locView"></div>
+    <div style="margin-top:16px;">
+      <div class="section-label">場所を追加</div>
+      <div class="add-loc-row">
+        <input type="text" id="newLocName" placeholder="場所名..." maxlength="24" />
+        <select id="newLocGroup">
+          <option value="A">グループA（最優先）</option>
+          <option value="B">グループB</option>
+          <option value="C">グループC</option>
+        </select>
+        <button onclick="addLocation()">＋ 追加</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="locOverlay">
+  <div class="modal" style="max-width:400px;">
+    <h3 id="locModalTitle">出店先を編集</h3>
+    <div class="modal-sub"></div>
+    <div class="modal-field">
+      <label>場所名</label>
+      <input type="text" id="locModalName" maxlength="24" />
+    </div>
+    <div class="modal-field">
+      <label>グループ（優先度）</label>
+      <select id="locModalGroup">
+        <option value="A">グループA（最優先）</option>
+        <option value="B">グループB</option>
+        <option value="C">グループC</option>
+      </select>
+    </div>
+    <div class="modal-field">
+      <label>出店可能曜日</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;" id="locModalDays">
+        <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;"><input type="checkbox" value="日"> 日</label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;"><input type="checkbox" value="月"> 月</label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;"><input type="checkbox" value="火"> 火</label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;"><input type="checkbox" value="水"> 水</label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;"><input type="checkbox" value="木"> 木</label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;"><input type="checkbox" value="金"> 金</label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;"><input type="checkbox" value="土"> 土</label>
+      </div>
+    </div>
+    <div class="modal-field">
+      <label>最優先曜日（★）</label>
+      <select id="locModalPriority">
+        <option value="">なし</option>
+        <option value="日">日</option><option value="月">月</option><option value="火">火</option>
+        <option value="水">水</option><option value="木">木</option><option value="金">金</option><option value="土">土</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button onclick="closeLocModal()">キャンセル</button>
+      <button class="primary" onclick="saveLocEdit()">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h3 id="modalTitle">出店を追加</h3>
+    <div class="modal-sub" id="modalSub"></div>
+    <div class="modal-field">
+      <label>出店場所</label>
+      <select id="modalLoc" onchange="toggleCustomLoc();applyLocMemory()"></select>
+    </div>
+    <div class="modal-field" id="customLocField" style="display:none;">
+      <label>場所名を入力</label>
+      <input type="text" id="modalLocCustom" placeholder="例：〇〇マルシェ" maxlength="40" />
+    </div>
+    <div class="modal-field">
+      <label>住所・場所の詳細（任意）</label>
+      <input type="text" id="modalAddress" placeholder="例：東京都渋谷区〇〇1-2-3" maxlength="60" />
+    </div>
+    <div class="modal-field">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+        <input type="checkbox" id="modalPending" onchange="togglePendingMode()" />
+        <span>調整中（時間未定）</span>
+      </label>
+    </div>
+    <div class="modal-field">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+        <input type="checkbox" id="modalChanged" />
+        <span style="color:#d97706;font-weight:500;">⚠ 変更あり（お客さんに通知）</span>
+      </label>
+    </div>
+    <div class="modal-field" id="timeField">
+      <label>出店時間</label>
+      <div class="time-row">
+        <input type="time" id="modalTimeStart" value="11:00" />
+        <span class="time-sep">〜</span>
+        <input type="time" id="modalTimeEnd" value="14:00" />
+      </div>
+    </div>
+    <div class="modal-field">
+      <label>メモ（任意）</label>
+      <input type="text" id="modalNote" placeholder="例：雨天中止" maxlength="40" />
+    </div>
+    <div class="modal-field">
+      <label>イベントURL・SNSリンク（任意）</label>
+      <input type="text" id="modalEventUrl" placeholder="例：https://instagram.com/..." maxlength="200" />
+    </div>
+    <div class="modal-field">
+      <label>出店インフォメーション</label>
+      <select id="modalStatus">
+        <option value="">通常営業</option>
+        <option value="open">🟢 営業中</option>
+        <option value="busy">🟡 混雑中</option>
+        <option value="closing_soon">🟠 まもなく終了</option>
+        <option value="closed_early">🔴 早期終了</option>
+        <option value="cancelled">⛔ 中止</option>
+      </select>
+    </div>
+    <div class="modal-field">
+      <label>ステータスメッセージ（任意）</label>
+      <input type="text" id="modalStatusMsg" placeholder="例：雨のため14時で終了します" maxlength="60" />
+    </div>
+    <div class="modal-footer">
+      <button onclick="closeModal()">キャンセル</button>
+      <button class="danger" id="deleteBtn" style="display:none" onclick="deleteEvent()">削除</button>
+      <button class="primary" onclick="saveEvent()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DOW = ['日','月','火','水','木','金','土'];
+const GC = { A:'#d44f2e', B:'#2471a3', C:'#1e8449' };
+const DEFAULT_LOCS = [
+  {name:'FELICE BASE',group:'A',days:['火'],priority:null},
+  {name:'ドゥ・トゥール',group:'A',days:['月','火','水','木','金','土','日'],priority:'水'},
+  {name:'プラウドシティ加賀',group:'A',days:['水','木'],priority:null},
+  {name:'ワールドシティタワーズ',group:'A',days:['月','火','水','木','金','土'],priority:null},
+  {name:'グローバルフロントタワー',group:'A',days:['火','木'],priority:null},
+  {name:'パークシティ西新宿',group:'A',days:['月','水','金'],priority:null},
+  {name:'サンシティ',group:'A',days:['木','土'],priority:null},
+  {name:'ルピアグランデみずほ台',group:'A',days:['水'],priority:null},
+  {name:'路地裏ガレージマーケット',group:'A',days:['水'],priority:null},
+  {name:'パークシティさいたま',group:'A',days:['水'],priority:null},
+  {name:'野崎さん宅',group:'A',days:['水'],priority:null},
+  {name:'大川端リバーシティ21西ブロック',group:'B',days:['火','水','木','金','土','日'],priority:'金'},
+  {name:'シティータワーズ東京ベイ',group:'B',days:['月','水','金'],priority:'金'},
+  {name:'志木ムクロジュビル',group:'B',days:['木'],priority:null},
+  {name:'パークステート上板橋',group:'B',days:['火','木'],priority:null},
+  {name:'クレストタワー品川シーサイド',group:'C',days:['月','火','水','木','金','土','日'],priority:null},
+  {name:'ザ・パークハウス西新宿タワー60',group:'C',days:['火','木'],priority:null},
+  {name:'パークシティ大宮',group:'C',days:['水'],priority:null},
+];
+let locs = JSON.parse(localStorage.getItem('kc_locs5')||'null') || DEFAULT_LOCS;
+let events = JSON.parse(localStorage.getItem('kc_events5')||'[]');
+let customLocs = JSON.parse(localStorage.getItem('kc_customlocs')||'[]');
+let locMemory = JSON.parse(localStorage.getItem('kc_locmemory')||'{}');
+
+const DEFAULT_PIZZA_MENUS = [
+  'マルゲリータ','クワトロフォルマッジ','ディアボラ','ビアンカ',
+  'サルシッチャ','バジルペスト','トマトバジル','照り焼きチキン',
+  '季節の特製ピザ','本日のおすすめ'
+];
+let pizzaMenuMaster = JSON.parse(localStorage.getItem('kc_pizzamenus')||'null') || DEFAULT_PIZZA_MENUS;
+let todayMenus = JSON.parse(localStorage.getItem('kc_todaymenus')||'[]');
+let siteInfo = JSON.parse(localStorage.getItem('kc_siteinfo')||'{"status":"","msg":"","lastUpdated":""}');
+
+const today = new Date();
+let cy = today.getFullYear(), cm = today.getMonth();
+let selDate=null, editIdx=null;
+
+function save(){
+  localStorage.setItem('kc_locs5',JSON.stringify(locs));
+  localStorage.setItem('kc_events5',JSON.stringify(events));
+  localStorage.setItem('kc_customlocs',JSON.stringify(customLocs));
+  localStorage.setItem('kc_locmemory',JSON.stringify(locMemory));
+  localStorage.setItem('kc_todaymenus',JSON.stringify(todayMenus));
+  localStorage.setItem('kc_pizzamenus',JSON.stringify(pizzaMenuMaster));
+  siteInfo.lastUpdated = new Date().toISOString();
+  localStorage.setItem('kc_siteinfo',JSON.stringify(siteInfo));
+}
+function addCustomLoc(name){
+  if(!name||locs.find(l=>l.name===name)||customLocs.includes(name)) return;
+  customLocs.push(name); save();
+}
+function removeCustomLoc(name){
+  customLocs=customLocs.filter(c=>c!==name); save();
+  fillLocSelect(null);
+}
+function saveLocMemory(loc,address,timeStart,timeEnd){
+  if(!loc) return;
+  locMemory[loc]={address,timeStart,timeEnd};
+  save();
+}
+function applyLocMemory(){
+  const loc=document.getElementById('modalLoc').value;
+  if(loc==='__custom__') return;
+  const mem=locMemory[loc];
+  if(!mem) return;
+  if(mem.address) document.getElementById('modalAddress').value=mem.address;
+  if(mem.timeStart) document.getElementById('modalTimeStart').value=mem.timeStart;
+  if(mem.timeEnd) document.getElementById('modalTimeEnd').value=mem.timeEnd;
+}
+
+function switchTab(tab){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',['calendar','today','locations'][i]===tab));
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  if(tab==='locations') renderLocView();
+  if(tab==='today') renderTodayView();
+}
+
+function renderTodayView(){
+  const statusOptions = [
+    {val:'', label:'通常営業', color:'var(--text2)'},
+    {val:'open', label:'🟢 営業中', color:'#1e8449'},
+    {val:'busy', label:'🟡 混雑中', color:'#b7770d'},
+    {val:'closing_soon', label:'🟠 まもなく終了', color:'#c84b2f'},
+    {val:'closed_early', label:'🔴 早期終了', color:'#c0392b'},
+    {val:'cancelled', label:'⛔ 中止', color:'#888'},
+  ];
+  const menuChecks = pizzaMenuMaster.map((m,idx)=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid var(--border);">
+      <label style="display:flex;align-items:center;gap:8px;flex:1;cursor:pointer;font-size:13px;">
+        <input type="checkbox" value="${m}" ${todayMenus.includes(m)?'checked':''} onchange="toggleMenu('${m}')" />
+        ${m}
+      </label>
+      <button onclick="deletePizzaMenu(${idx})" style="font-size:11px;color:var(--text2);background:transparent;border:none;cursor:pointer;padding:2px 6px;flex-shrink:0;">削除</button>
+    </div>`).join('');
+
+  document.getElementById('todayView').innerHTML=`
+    <div style="display:flex;flex-direction:column;gap:20px;">
+
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;">
+        <div class="section-label" style="margin-bottom:12px;">出店インフォメーション</div>
+        <div class="modal-field">
+          <label>現在の状況</label>
+          <select id="siteStatus" onchange="updateSiteInfo()" style="width:100%;padding:9px 12px;border:1px solid var(--border2);border-radius:var(--radius);font-size:14px;font-family:inherit;background:var(--surface);color:var(--text);outline:none;">
+            ${statusOptions.map(o=>`<option value="${o.val}"${siteInfo.status===o.val?' selected':''}>${o.label}</option>`).join('')}
+          </select>
+        </div>
+        <div class="modal-field">
+          <label>メッセージ（任意）</label>
+          <input type="text" id="siteStatusMsg" value="${siteInfo.msg||''}" placeholder="例：雨のため14時で終了します" maxlength="80"
+            oninput="updateSiteInfo()"
+            style="width:100%;padding:9px 12px;border:1px solid var(--border2);border-radius:var(--radius);font-size:14px;font-family:inherit;background:var(--surface);color:var(--text);outline:none;" />
+        </div>
+        ${siteInfo.lastUpdated?`<div style="font-size:11px;color:var(--text2);margin-top:8px;">最終更新：${formatUpdated(siteInfo.lastUpdated)}</div>`:''}
+      </div>
+
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;">
+        <div class="section-label" style="margin-bottom:4px;">本日のピッツァメニュー</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:12px;">提供するメニューにチェック。追加・削除も自由にできます</div>
+        <div id="pizzaMenuList">${menuChecks}</div>
+        <div style="display:flex;gap:8px;margin-top:12px;align-items:center;">
+          <input type="text" id="newPizzaMenu" placeholder="メニュー名を追加..." maxlength="30"
+            style="flex:1;padding:8px 12px;border:1px solid var(--border2);border-radius:var(--radius);font-size:13px;font-family:inherit;background:var(--surface);color:var(--text);outline:none;" />
+          <button onclick="addPizzaMenu()" style="padding:8px 14px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);font-size:13px;font-family:inherit;cursor:pointer;color:var(--text);">＋ 追加</button>
+        </div>
+        <div style="margin-top:10px;font-size:12px;color:var(--text2);">選択中：<span id="menuCount">${todayMenus.length}</span>品</div>
+      </div>
+
+    </div>
+  `;
+  setTimeout(()=>{
+    const inp=document.getElementById('newPizzaMenu');
+    if(inp) inp.onkeydown=e=>{if(e.key==='Enter')addPizzaMenu();};
+  },0);
+}
+
+function toggleMenu(name){
+  if(todayMenus.includes(name)) todayMenus=todayMenus.filter(m=>m!==name);
+  else todayMenus.push(name);
+  save();
+  const el=document.getElementById('menuCount');
+  if(el) el.textContent=todayMenus.length;
+}
+
+function addPizzaMenu(){
+  const inp=document.getElementById('newPizzaMenu');
+  const name=inp.value.trim();
+  if(!name) return;
+  pizzaMenuMaster.push(name);
+  inp.value='';
+  save();
+  renderTodayView();
+}
+
+function deletePizzaMenu(idx){
+  const name=pizzaMenuMaster[idx];
+  pizzaMenuMaster.splice(idx,1);
+  todayMenus=todayMenus.filter(m=>m!==name);
+  save();
+  renderTodayView();
+}
+
+function updateSiteInfo(){
+  siteInfo.status=document.getElementById('siteStatus').value;
+  siteInfo.msg=document.getElementById('siteStatusMsg').value;
+  save();
+  const el=document.querySelector('#todayView [style*="最終更新"]');
+  if(el) el.textContent=`最終更新：${formatUpdated(siteInfo.lastUpdated)}`;
+}
+
+function formatUpdated(iso){
+  if(!iso) return '';
+  const d=new Date(iso);
+  return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+function renderLocView(){
+  const labels={A:'グループA — 最優先',B:'グループB',C:'グループC'};
+  let html='';
+  ['A','B','C'].forEach(g=>{
+    const gl=locs.filter(l=>l.group===g); if(!gl.length) return;
+    html+=`<div class="group-section"><div class="group-header"><span class="group-badge badge-${g.toLowerCase()}">${g}</span><span class="group-name">${labels[g]}</span></div><div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;"><table class="loc-table"><thead><tr><th>場所名</th><th>出店可能曜日（★＝最優先）</th><th></th></tr></thead><tbody>`;
+    gl.forEach(l=>{
+      const gi=locs.indexOf(l);
+      const tags=l.days.map(d=>{
+        const ip=l.priority===d;
+        const c=GC[l.group];
+        return `<span class="day-tag${ip?' priority':''}" style="border-color:${c}${ip?'99':'33'};color:${c};background:${c}${ip?'22':'0d'}">${ip?'★':''}${d}</span>`;
+      }).join('');
+      html+=`<tr><td style="font-weight:500">${l.name}</td><td><div class="days-cell">${tags}</div></td><td style="text-align:right;white-space:nowrap"><button onclick="openLocEdit(${gi})" style="font-size:11px;color:var(--gb);background:transparent;border:none;cursor:pointer;padding:4px 6px;">編集</button> <button onclick="removeLoc(${gi})" style="font-size:11px;color:var(--text2);background:transparent;border:none;cursor:pointer;padding:4px 6px;">削除</button></td></tr>`;
+    });
+    html+=`</tbody></table></div></div>`;
+  });
+  document.getElementById('locView').innerHTML=html;
+}
+
+function addLocation(){
+  const name=document.getElementById('newLocName').value.trim();
+  const group=document.getElementById('newLocGroup').value;
+  if(!name||locs.find(l=>l.name===name)){document.getElementById('newLocName').value='';return;}
+  locs.push({name,group,days:[],priority:null});
+  document.getElementById('newLocName').value='';
+  save(); renderLocView();
+}
+
+function removeLoc(idx){
+  if(!confirm(`「${locs[idx].name}」を削除しますか？`))return;
+  const name=locs[idx].name; locs.splice(idx,1); events=events.filter(e=>e.loc!==name);
+  save(); renderLocView(); renderCalendar();
+}
+
+let editLocIdx=null;
+function openLocEdit(idx){
+  editLocIdx=idx;
+  const l=locs[idx];
+  document.getElementById('locModalTitle').textContent=`「${l.name}」を編集`;
+  document.getElementById('locModalName').value=l.name;
+  document.getElementById('locModalGroup').value=l.group;
+  document.querySelectorAll('#locModalDays input[type=checkbox]').forEach(cb=>{
+    cb.checked=l.days.includes(cb.value);
+  });
+  document.getElementById('locModalPriority').value=l.priority||'';
+  document.getElementById('locOverlay').classList.add('open');
+}
+function closeLocModal(){ document.getElementById('locOverlay').classList.remove('open'); }
+function saveLocEdit(){
+  const l=locs[editLocIdx];
+  const oldName=l.name;
+  const newName=document.getElementById('locModalName').value.trim();
+  if(!newName) return;
+  const days=[...document.querySelectorAll('#locModalDays input[type=checkbox]:checked')].map(cb=>cb.value);
+  const priority=document.getElementById('locModalPriority').value||null;
+  locs[editLocIdx]={...l, name:newName, group:document.getElementById('locModalGroup').value, days, priority};
+  if(oldName!==newName) events=events.map(e=>e.loc===oldName?{...e,loc:newName}:e);
+  save(); closeLocModal(); renderLocView(); renderCalendar();
+}
+
+function getSuggestions(dateStr){
+  const dow=DOW[new Date(dateStr).getDay()];
+  const booked=events.filter(e=>e.date===dateStr).map(e=>e.loc);
+  const candidates=['A','B','C'].flatMap(g=>locs.filter(l=>l.group===g&&l.days.includes(dow)&&!booked.includes(l.name)).map(l=>({...l,isPriority:l.priority===dow})));
+  return [...candidates.filter(l=>l.isPriority),...candidates.filter(l=>!l.isPriority)];
+}
+
+function renderSuggestBar(){
+  const bar=document.getElementById('suggestBar');
+  if(cm!==today.getMonth()||cy!==today.getFullYear()){bar.innerHTML='';return;}
+  const dateStr=`${cy}-${String(cm+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  const sug=getSuggestions(dateStr);
+  if(!sug.length){bar.innerHTML='';return;}
+  const chips=sug.slice(0,8).map(s=>{
+    const c=GC[s.group];
+    return `<button class="suggest-chip" style="border-color:${c};color:${c}" onclick="openAddWithLoc('${dateStr}','${s.name.replace(/'/g,"\\'")}')"> ${s.isPriority?'★ ':''}${s.name}</button>`;
+  }).join('');
+  bar.innerHTML=`<div class="suggest-bar"><h4>今日 (${cm+1}/${today.getDate()}) に行ける出店先（優先度順）</h4><div class="suggest-chips">${chips}</div></div>`;
+}
+
+function renderCalendar(){
+  document.getElementById('monthLabel').textContent=`${cy}年${cm+1}月`;
+  const first=new Date(cy,cm,1).getDay();
+  const days=new Date(cy,cm+1,0).getDate();
+  let html='';
+  for(let i=0;i<first;i++) html+=`<div class="cal-cell empty"></div>`;
+  for(let d=1;d<=days;d++){
+    const ds=`${cy}-${String(cm+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dow=new Date(cy,cm,d).getDay();
+    const isToday=d===today.getDate()&&cm===today.getMonth()&&cy===today.getFullYear();
+    const de=events.filter(e=>e.date===ds);
+    const chips=de.map(e=>{
+      const l=locs.find(l=>l.name===e.loc);
+      const c=e.pending?'#888':e.changed?'#d97706':(GC[l?l.group:'A']||'#888');
+      const i=events.indexOf(e);
+      const timeLabel=e.timeStart&&e.timeStart!==''?` ${e.timeStart}`:e.pending?' 調整中':'';
+      const changeLabel=e.changed?' ⚠':'';
+      return `<span class="event-chip" style="background:${c}22;color:${c};border:0.5px solid ${c}66${e.pending?';border-style:dashed':''}" onclick="openEdit(event,'${ds}',${i})">${e.loc}${changeLabel}${timeLabel}</span>`;
+    }).join('');
+    const cls=['cal-cell',isToday?'today':'',dow===0?'sunday':dow===6?'saturday':''].filter(Boolean).join(' ');
+    html+=`<div class="${cls}" onclick="openAdd('${ds}')"><div class="day-num">${d}</div>${chips}</div>`;
+  }
+  document.getElementById('calGrid').innerHTML=html;
+  renderSuggestBar();
+}
+
+function changeMonth(dir){
+  cm+=dir;
+  if(cm>11){cm=0;cy++;} if(cm<0){cm=11;cy--;}
+  renderCalendar();
+}
+
+function fillLocSelect(selected){
+  let html='';
+  const isCustomNew = selected && !locs.find(l=>l.name===selected) && !customLocs.includes(selected);
+  const isCustom = selected && !locs.find(l=>l.name===selected);
+  ['A','B','C'].forEach(g=>{
+    const gl=locs.filter(l=>l.group===g); if(!gl.length) return;
+    html+=`<optgroup label="グループ${g}">`;
+    gl.forEach(l=>{ html+=`<option value="${l.name}"${l.name===selected?' selected':''}>${l.priority?'★ ':''}${l.name}</option>`; });
+    html+='</optgroup>';
+  });
+  if(customLocs.length){
+    html+=`<optgroup label="履歴（不定期）">`;
+    customLocs.forEach(n=>{ html+=`<option value="${n}"${n===selected?' selected':''}>${n}</option>`; });
+    html+='</optgroup>';
+  }
+  html+=`<optgroup label="その他"><option value="__custom__"${isCustomNew?' selected':''}>その他（自由入力）</option></optgroup>`;
+  document.getElementById('modalLoc').innerHTML=html;
+  if(isCustomNew) document.getElementById('modalLocCustom').value=selected||'';
+  else if(!isCustom) document.getElementById('modalLocCustom').value='';
+  toggleCustomLoc();
+}
+
+function toggleCustomLoc(){
+  const val=document.getElementById('modalLoc').value;
+  document.getElementById('customLocField').style.display=val==='__custom__'?'block':'none';
+}
+
+function togglePendingMode(){
+  const pending=document.getElementById('modalPending').checked;
+  document.getElementById('timeField').style.opacity=pending?'0.3':'1';
+  document.getElementById('timeField').style.pointerEvents=pending?'none':'auto';
+  if(pending){
+    document.getElementById('modalTimeStart').value='';
+    document.getElementById('modalTimeEnd').value='';
+  }
+}
+
+function openAdd(ds){
+  selDate=ds; editIdx=null;
+  const [y,m,d]=ds.split('-');
+  const dow=DOW[new Date(ds).getDay()];
+  document.getElementById('modalTitle').textContent=`${parseInt(m)}月${parseInt(d)}日 (${dow}) — 出店追加`;
+  document.getElementById('modalSub').textContent='';
+  document.getElementById('modalNote').value='';
+  document.getElementById('modalAddress').value='';
+  document.getElementById('modalTimeStart').value='11:00';
+  document.getElementById('modalTimeEnd').value='14:00';
+  document.getElementById('modalLocCustom').value='';
+  document.getElementById('modalPending').checked=false;
+  document.getElementById('modalChanged').checked=false;
+  document.getElementById('modalEventUrl').value='';
+  document.getElementById('modalStatus').value='';
+  document.getElementById('modalStatusMsg').value='';
+  togglePendingMode();
+  document.getElementById('deleteBtn').style.display='none';
+  const sug=getSuggestions(ds);
+  if(sug.length) fillLocSelect(sug[0].name);
+  document.getElementById('overlay').classList.add('open');
+}
+
+function openAddWithLoc(ds,name){ openAdd(ds); fillLocSelect(name); }
+
+function openEdit(ev,ds,idx){
+  ev.stopPropagation(); selDate=ds; editIdx=idx;
+  const e=events[idx];
+  document.getElementById('modalTitle').textContent='出店を編集';
+  document.getElementById('modalSub').textContent=ds;
+  document.getElementById('modalNote').value=e.note||'';
+  document.getElementById('modalAddress').value=e.address||'';
+  document.getElementById('modalTimeStart').value=e.timeStart||'11:00';
+  document.getElementById('modalTimeEnd').value=e.timeEnd||'14:00';
+  document.getElementById('modalPending').checked=e.pending||false;
+  document.getElementById('modalChanged').checked=e.changed||false;
+  document.getElementById('modalEventUrl').value=e.eventUrl||'';
+  document.getElementById('modalStatus').value=e.status||'';
+  document.getElementById('modalStatusMsg').value=e.statusMsg||'';
+  togglePendingMode();
+  document.getElementById('deleteBtn').style.display='';
+  fillLocSelect(e.loc);
+  document.getElementById('overlay').classList.add('open');
+}
+
+function closeModal(){ document.getElementById('overlay').classList.remove('open'); }
+
+function saveEvent(){
+  let loc=document.getElementById('modalLoc').value;
+  if(loc==='__custom__') loc=document.getElementById('modalLocCustom').value.trim();
+  const address=document.getElementById('modalAddress').value.trim();
+  const pending=document.getElementById('modalPending').checked;
+  const changed=document.getElementById('modalChanged').checked;
+  const timeStart=pending?'':document.getElementById('modalTimeStart').value;
+  const timeEnd=pending?'':document.getElementById('modalTimeEnd').value;
+  const note=document.getElementById('modalNote').value.trim();
+  const eventUrl=document.getElementById('modalEventUrl').value.trim();
+  const status=document.getElementById('modalStatus').value;
+  const statusMsg=document.getElementById('modalStatusMsg').value.trim();
+  if(!loc) return;
+  addCustomLoc(loc);
+  if(!pending) saveLocMemory(loc,address,timeStart,timeEnd);
+  if(editIdx!==null){ events[editIdx]={date:selDate,loc,address,timeStart,timeEnd,note,pending,changed,eventUrl,status,statusMsg}; }
+  else { events.push({date:selDate,loc,address,timeStart,timeEnd,note,pending,changed,eventUrl,status,statusMsg}); }
+  save(); closeModal(); renderCalendar();
+}
+
+function deleteEvent(){ events.splice(editIdx,1); save(); closeModal(); renderCalendar(); }
+
+function exportICS(){
+  const pre=`${cy}-${String(cm+1).padStart(2,'0')}`;
+  const me=events.filter(e=>e.date.startsWith(pre));
+  if(!me.length){alert('この月に出店予定がありません。');return;}
+  let ics='BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//KitchenCar//JP\r\nCALSCALE:GREGORIAN\r\n';
+
+  // インフォメーション予定（今日の状態を当月の今日に追加）
+  const todayStr=`${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
+  const tomorrowStr=(()=>{const d=new Date(today);d.setDate(d.getDate()+1);return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;})();
+  if(siteInfo.status||todayMenus.length>0){
+    const statusLabels={'open':'🟢 営業中','busy':'🟡 混雑中','closing_soon':'🟠 まもなく終了','closed_early':'🔴 早期終了','cancelled':'⛔ 中止'};
+    const statusLabel=statusLabels[siteInfo.status]||'';
+    const infoLines=[];
+    if(statusLabel) infoLines.push(statusLabel);
+    if(siteInfo.msg) infoLines.push(siteInfo.msg);
+    if(todayMenus.length) infoLines.push('本日のメニュー：'+todayMenus.join('・'));
+    infoLines.push('FELICE_INFO');
+    const updated=siteInfo.lastUpdated?`最終更新：${formatUpdated(siteInfo.lastUpdated)}`:'';
+    ics+=`BEGIN:VEVENT\r\nDTSTART;VALUE=DATE:${todayStr}\r\nDTEND;VALUE=DATE:${tomorrowStr}\r\n`;
+    ics+=`SUMMARY:📢 ${statusLabel||'インフォメーション'}\r\n`;
+    ics+=`DESCRIPTION:${infoLines.join('\\n')}${updated?'\\n'+updated:''}\r\n`;
+    ics+=`UID:info-${todayStr}@kitchencar\r\nEND:VEVENT\r\n`;
+  }
+
+  me.forEach(e=>{
+    const d=e.date.replace(/-/g,'');
+    let dtstart, dtend;
+    if(e.timeStart){
+      const ts=e.timeStart.replace(':','');
+      const te=(e.timeEnd||'').replace(':','');
+      dtstart=`${d}T${ts}00`;
+      dtend=`${d}T${te||ts}00`;
+      ics+=`BEGIN:VEVENT\r\nDTSTART;TZID=Asia/Tokyo:${dtstart}\r\nDTEND;TZID=Asia/Tokyo:${dtend}\r\n`;
+    } else {
+      const nx=new Date(e.date); nx.setDate(nx.getDate()+1);
+      const de=`${nx.getFullYear()}${String(nx.getMonth()+1).padStart(2,'0')}${String(nx.getDate()).padStart(2,'0')}`;
+      ics+=`BEGIN:VEVENT\r\nDTSTART;VALUE=DATE:${d}\r\nDTEND;VALUE=DATE:${de}\r\n`;
+    }
+    ics+=`SUMMARY:${e.changed?'【変更】':''}【出店】${e.loc}\r\n`;
+    if(e.address) ics+=`LOCATION:${e.address}\r\n`;
+    const descParts=[];
+    if(e.note) descParts.push(e.note);
+    if(e.status){const sl={'open':'🟢 営業中','busy':'🟡 混雑中','closing_soon':'🟠 まもなく終了','closed_early':'🔴 早期終了','cancelled':'⛔ 中止'};descParts.push(sl[e.status]||'');}
+    if(e.statusMsg) descParts.push(e.statusMsg);
+    if(e.eventUrl) descParts.push('🔗 '+e.eventUrl);
+    if(descParts.length) ics+=`DESCRIPTION:${descParts.join('\\n')}\r\n`;
+    if(e.eventUrl) ics+=`URL:${e.eventUrl}\r\n`;
+    ics+=`UID:${d}-${Math.random().toString(36).slice(2)}@kitchencar\r\nEND:VEVENT\r\n`;
+  });
+  ics+='END:VCALENDAR';
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([ics],{type:'text/calendar;charset=utf-8'}));
+  a.download=`schedule_${pre}.ics`; a.click();
+}
+
+document.getElementById('overlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
+document.getElementById('locOverlay').addEventListener('click',function(e){if(e.target===this)closeLocModal();});
+document.getElementById('newLocName').addEventListener('keydown',function(e){if(e.key==='Enter')addLocation();});
+renderCalendar();
+</script>
+</body>
+</html>

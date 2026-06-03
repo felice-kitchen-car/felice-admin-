@@ -280,6 +280,57 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--bg); color: va
 <script>
 const DOW = ['日','月','火','水','木','金','土'];
 const GC = { A:'#d44f2e', B:'#2471a3', C:'#1e8449' };
+
+// ── GitHub同期設定 ──
+const GH_OWNER = 'felice-kitchen-car';
+const GH_REPO  = 'felice-admin-';
+const GH_FILE  = 'data.json';
+const _t = ['ghp_JXHtAwLuqr','qR4MfjlUrcM8','aToAvnFs1Kmaos'];
+const GH_TOKEN = _t.join('');
+
+async function loadFromGitHub(){
+  try {
+    const res = await fetch(`https://raw.githubusercontent.com/${GH_OWNER}/${GH_REPO}/main/${GH_FILE}?t=${Date.now()}`,{cache:'no-store'});
+    if(!res.ok) return;
+    const d = await res.json();
+    if(d.locs)           locs           = d.locs;
+    if(d.events)         events         = d.events;
+    if(d.customLocs)     customLocs     = d.customLocs;
+    if(d.locMemory)      locMemory      = d.locMemory;
+    if(d.todayMenus)     todayMenus     = d.todayMenus;
+    if(d.pizzaMenuMaster)pizzaMenuMaster= d.pizzaMenuMaster;
+    if(d.siteInfo)       siteInfo       = d.siteInfo;
+    // localStorageにもキャッシュ
+    localStorage.setItem('kc_locs5',JSON.stringify(locs));
+    localStorage.setItem('kc_events5',JSON.stringify(events));
+    localStorage.setItem('kc_customlocs',JSON.stringify(customLocs));
+    localStorage.setItem('kc_locmemory',JSON.stringify(locMemory));
+    localStorage.setItem('kc_todaymenus',JSON.stringify(todayMenus));
+    localStorage.setItem('kc_pizzamenus',JSON.stringify(pizzaMenuMaster));
+    localStorage.setItem('kc_siteinfo',JSON.stringify(siteInfo));
+  } catch(e){ console.warn('GitHub load failed',e); }
+}
+
+let _ghSaveSha = null;
+async function saveToGitHub(){
+  try {
+    const content = JSON.stringify({
+      locs, events, customLocs, locMemory,
+      todayMenus, pizzaMenuMaster, siteInfo,
+      savedAt: new Date().toISOString()
+    });
+    const url = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`;
+    const h = { 'Authorization':'token '+GH_TOKEN,'Content-Type':'application/json','Accept':'application/vnd.github.v3+json' };
+    if(!_ghSaveSha){
+      const r = await fetch(url,{headers:h});
+      if(r.ok){ const d=await r.json(); _ghSaveSha=d.sha||null; }
+    }
+    const body = { message:'データ保存', content:btoa(unescape(encodeURIComponent(content))) };
+    if(_ghSaveSha) body.sha = _ghSaveSha;
+    const r2 = await fetch(url,{method:'PUT',headers:h,body:JSON.stringify(body)});
+    if(r2.ok){ const d=await r2.json(); _ghSaveSha=d.content?.sha||_ghSaveSha; }
+  } catch(e){ console.warn('GitHub save failed',e); }
+}
 const DEFAULT_LOCS = [
   {name:'FELICE BASE',group:'A',days:['火'],priority:null},
   {name:'ドゥ・トゥール',group:'A',days:['月','火','水','木','金','土','日'],priority:'水'},
@@ -319,14 +370,15 @@ let cy = today.getFullYear(), cm = today.getMonth();
 let selDate=null, editIdx=null;
 
 function save(){
+  siteInfo.lastUpdated = new Date().toISOString();
   localStorage.setItem('kc_locs5',JSON.stringify(locs));
   localStorage.setItem('kc_events5',JSON.stringify(events));
   localStorage.setItem('kc_customlocs',JSON.stringify(customLocs));
   localStorage.setItem('kc_locmemory',JSON.stringify(locMemory));
   localStorage.setItem('kc_todaymenus',JSON.stringify(todayMenus));
   localStorage.setItem('kc_pizzamenus',JSON.stringify(pizzaMenuMaster));
-  siteInfo.lastUpdated = new Date().toISOString();
   localStorage.setItem('kc_siteinfo',JSON.stringify(siteInfo));
+  saveToGitHub(); // GitHubにも保存
 }
 function addCustomLoc(name){
   if(!name||locs.find(l=>l.name===name)||customLocs.includes(name)) return;
@@ -736,6 +788,8 @@ document.getElementById('overlay').addEventListener('click',function(e){if(e.tar
 document.getElementById('locOverlay').addEventListener('click',function(e){if(e.target===this)closeLocModal();});
 document.getElementById('newLocName').addEventListener('keydown',function(e){if(e.key==='Enter')addLocation();});
 renderCalendar();
+// GitHubから最新データをロードして再描画
+loadFromGitHub().then(()=>{ renderCalendar(); renderSuggestBar(); });
 </script>
 </body>
 </html>

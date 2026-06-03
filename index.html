@@ -627,10 +627,11 @@ function openAdd(ds){
   document.getElementById('deleteBtn').style.display='none';
   const sug=getSuggestions(ds);
   if(sug.length) fillLocSelect(sug[0].name);
+  applyLocMemory();
   document.getElementById('overlay').classList.add('open');
 }
 
-function openAddWithLoc(ds,name){ openAdd(ds); fillLocSelect(name); }
+function openAddWithLoc(ds,name){ openAdd(ds); fillLocSelect(name); applyLocMemory(); }
 
 function openEdit(ev,ds,idx){
   ev.stopPropagation(); selDate=ds; editIdx=idx;
